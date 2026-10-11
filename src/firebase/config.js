@@ -10,6 +10,17 @@ import {
   writeBatch
 } from 'firebase/firestore';
 
+// Project default configuration for Bosques de Robledal 2026
+export const DEFAULT_FIREBASE_CONFIG = {
+  apiKey: "AIzaSyDphb8EJ7ri6QzLnsFE-CpGX3uuGvO_MOM",
+  authDomain: "bosques-robledal-2026.firebaseapp.com",
+  projectId: "bosques-robledal-2026",
+  storageBucket: "bosques-robledal-2026.firebasestorage.app",
+  messagingSenderId: "756049934339",
+  appId: "1:756049934339:web:fb2599f516d3ab9d5ff636",
+  measurementId: "G-JFEX55P9EC"
+};
+
 // Default configuration key for localStorage
 const FIREBASE_CONFIG_STORAGE_KEY = 'bosques_robledal_firebase_config';
 
@@ -31,7 +42,7 @@ export function getStoredFirebaseConfig() {
       appId: import.meta.env.VITE_FIREBASE_APP_ID
     };
   }
-  return null;
+  return DEFAULT_FIREBASE_CONFIG;
 }
 
 export function saveStoredFirebaseConfig(config) {
