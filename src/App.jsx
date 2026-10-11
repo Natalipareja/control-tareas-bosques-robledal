@@ -9,6 +9,7 @@ import TaskModal from './components/TaskModal';
 import TaskDetailModal from './components/TaskDetailModal';
 import NewUserModal from './components/NewUserModal';
 import WhatsAppSettingsModal from './components/WhatsAppSettingsModal';
+import CloudSyncModal from './components/CloudSyncModal';
 
 function App() {
   const { activeView, setActiveView, setSelectedAssigneeId, checkDueReminders } = useStore();
@@ -24,6 +25,7 @@ function App() {
 
   const [isNewUserModalOpen, setIsNewUserModalOpen] = useState(false);
   const [isWhatsAppSettingsOpen, setIsWhatsAppSettingsOpen] = useState(false);
+  const [isCloudSyncOpen, setIsCloudSyncOpen] = useState(false);
 
   // Handlers
   const handleOpenNewTask = (initialOverrides = null) => {
@@ -53,6 +55,7 @@ function App() {
         onOpenNewTask={() => handleOpenNewTask()}
         onOpenNewUser={() => setIsNewUserModalOpen(true)}
         onOpenWhatsAppConfig={() => setIsWhatsAppSettingsOpen(true)}
+        onOpenCloudSync={() => setIsCloudSyncOpen(true)}
       />
 
       {/* Main View Area */}
@@ -115,6 +118,11 @@ function App() {
       <NewUserModal
         isOpen={isNewUserModalOpen}
         onClose={() => setIsNewUserModalOpen(false)}
+      />
+
+      <CloudSyncModal
+        isOpen={isCloudSyncOpen}
+        onClose={() => setIsCloudSyncOpen(false)}
       />
     </div>
   );

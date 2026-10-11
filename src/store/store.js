@@ -1,4 +1,12 @@
 import { create } from 'zustand';
+import { 
+  db, 
+  saveTaskToCloud, 
+  deleteTaskFromCloud, 
+  saveUserToCloud, 
+  bulkUploadToCloud 
+} from '../firebase/config';
+import { collection, onSnapshot } from 'firebase/firestore';
 
 export const initialUsers = [
   { 
@@ -351,6 +359,19 @@ export const useStore = create((set, get) => ({
   setSelectedCategory: (category) => set({ selectedCategory: category }),
   setSelectedPriority: (priority) => set({ selectedPriority: priority }),
   
+  // Tasks & Users batch setter actions
+  setTasks: (tasks) => {
+    saveToStorage('br_tasks', tasks);
+    set({ tasks });
+    if (db) bulkUploadToCloud(tasks, get().users);
+  },
+
+  setUsers: (users) => {
+    saveToStorage('br_consejeros', users);
+    set({ users });
+    if (db) bulkUploadToCloud(get().tasks, users);
+  },
+
   // WhatsApp Settings Actions
   updateWhatsAppConfig: (newConfig) => {
     set((state) => {
@@ -386,6 +407,9 @@ export const useStore = create((set, get) => ({
       saveToStorage('br_tasks', updated);
       return { tasks: updated };
     });
+
+    // Mirror to Firebase Cloud if connected
+    saveTaskToCloud(newTask);
 
     // Auto-send WhatsApp in background without opening window if enabled
     const state = get();
@@ -433,16 +457,23 @@ export const useStore = create((set, get) => ({
 
   updateTaskStatus: (taskId, newStatus) => {
     set((state) => {
-      const updated = state.tasks.map((t) => 
-        t.id === taskId ? { ...t, status: newStatus } : t
-      );
+      let targetTask = null;
+      const updated = state.tasks.map((t) => {
+        if (t.id === taskId) {
+          targetTask = { ...t, status: newStatus };
+          return targetTask;
+        }
+        return t;
+      });
       saveToStorage('br_tasks', updated);
+      if (targetTask) saveTaskToCloud(targetTask);
       return { tasks: updated };
     });
   },
 
   updateTask: (taskId, updatedFields) => {
     set((state) => {
+      let targetTask = null;
       const updated = state.tasks.map((t) => {
         if (t.id !== taskId) return t;
         const newDueDate = updatedFields.dueDate || t.dueDate;
@@ -450,9 +481,11 @@ export const useStore = create((set, get) => ({
           ? generateReminders(newDueDate)
           : (t.reminders || generateReminders(t.dueDate));
 
-        return { ...t, ...updatedFields, reminders };
+        targetTask = { ...t, ...updatedFields, reminders };
+        return targetTask;
       });
       saveToStorage('br_tasks', updated);
+      if (targetTask) saveTaskToCloud(targetTask);
       return { tasks: updated };
     });
   },
@@ -463,6 +496,7 @@ export const useStore = create((set, get) => ({
       saveToStorage('br_tasks', updated);
       return { tasks: updated };
     });
+    deleteTaskFromCloud(taskId);
   },
 
   sendTaskNotification: async (taskId, type = 'assign') => {
@@ -500,6 +534,7 @@ export const useStore = create((set, get) => ({
     };
 
     set((s) => {
+      let savedTask = null;
       const updated = s.tasks.map((t) => {
         if (t.id !== taskId) return t;
         const updatedReminders = (t.reminders || []).map(r => {
@@ -508,13 +543,15 @@ export const useStore = create((set, get) => ({
           }
           return r;
         });
-        return {
+        savedTask = {
           ...t,
           reminders: updatedReminders,
           notificationsLog: [newLog, ...(t.notificationsLog || [])]
         };
+        return savedTask;
       });
       saveToStorage('br_tasks', updated);
+      if (savedTask) saveTaskToCloud(savedTask);
       return { tasks: updated };
     });
   },
@@ -546,18 +583,23 @@ export const useStore = create((set, get) => ({
       date: 'Justo ahora'
     };
     set((state) => {
-      const updated = state.tasks.map((t) => 
-        t.id === taskId 
-          ? { ...t, comments: [...(t.comments || []), newComment] }
-          : t
-      );
+      let targetTask = null;
+      const updated = state.tasks.map((t) => {
+        if (t.id === taskId) {
+          targetTask = { ...t, comments: [...(t.comments || []), newComment] };
+          return targetTask;
+        }
+        return t;
+      });
       saveToStorage('br_tasks', updated);
+      if (targetTask) saveTaskToCloud(targetTask);
       return { tasks: updated };
     });
   },
 
   toggleCheckpoint: (taskId, index) => {
     set((state) => {
+      let targetTask = null;
       const updated = state.tasks.map((t) => {
         if (t.id !== taskId) return t;
         const newCheckpoints = [...(t.checkpoints || [])];
@@ -567,9 +609,11 @@ export const useStore = create((set, get) => ({
             done: !newCheckpoints[index].done 
           };
         }
-        return { ...t, checkpoints: newCheckpoints };
+        targetTask = { ...t, checkpoints: newCheckpoints };
+        return targetTask;
       });
       saveToStorage('br_tasks', updated);
+      if (targetTask) saveTaskToCloud(targetTask);
       return { tasks: updated };
     });
   },
@@ -589,6 +633,7 @@ export const useStore = create((set, get) => ({
       saveToStorage('br_consejeros', updated);
       return { users: updated };
     });
+    saveUserToCloud(newUser);
     return newUser;
   },
 
@@ -608,4 +653,43 @@ export const useStore = create((set, get) => ({
     });
   }
 }));
+
+// Setup realtime listener for Firebase Firestore if connected
+if (db) {
+  try {
+    // Tasks subscription
+    onSnapshot(collection(db, 'tasks'), (snapshot) => {
+      if (snapshot.empty) {
+        // If Firestore collection is empty, automatically seed with local tasks
+        const currentTasks = useStore.getState().tasks;
+        const currentUsers = useStore.getState().users;
+        if (currentTasks.length > 0) {
+          bulkUploadToCloud(currentTasks, currentUsers).catch(console.warn);
+        }
+      } else {
+        const cloudTasks = snapshot.docs.map(doc => doc.data());
+        cloudTasks.sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
+        saveToStorage('br_tasks', cloudTasks);
+        useStore.setState({ tasks: cloudTasks });
+      }
+    }, (err) => {
+      console.warn('Firebase realtime sync (tasks) note:', err.message);
+    });
+
+    // Consejeros subscription
+    onSnapshot(collection(db, 'consejeros'), (snapshot) => {
+      if (!snapshot.empty) {
+        const cloudUsers = snapshot.docs.map(doc => doc.data());
+        cloudUsers.sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
+        saveToStorage('br_consejeros', cloudUsers);
+        useStore.setState({ users: cloudUsers });
+      }
+    }, (err) => {
+      console.warn('Firebase realtime sync (consejeros) note:', err.message);
+    });
+  } catch (err) {
+    console.warn('Firebase initialization listener error:', err);
+  }
+}
+
 

@@ -1,4 +1,3 @@
-import React from 'react';
 import { 
   CheckSquare, 
   PlusCircle, 
@@ -8,11 +7,13 @@ import {
   Sparkles,
   Search,
   ShieldCheck,
-  MessageCircle
+  MessageCircle,
+  Cloud
 } from 'lucide-react';
 import { useStore } from '../store/store';
+import { db } from '../firebase/config';
 
-export default function Navbar({ onOpenNewTask, onOpenNewUser, onOpenWhatsAppConfig }) {
+export default function Navbar({ onOpenNewTask, onOpenNewUser, onOpenWhatsAppConfig, onOpenCloudSync }) {
   const { 
     activeView, 
     setActiveView, 
@@ -101,6 +102,22 @@ export default function Navbar({ onOpenNewTask, onOpenNewUser, onOpenWhatsAppCon
             </div>
 
 
+
+            {/* Cloud Sync Button */}
+            <button
+              onClick={onOpenCloudSync}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all border ${
+                db 
+                  ? 'bg-emerald-50 text-emerald-800 border-emerald-200 hover:bg-emerald-100 shadow-xs' 
+                  : 'bg-slate-100 text-slate-700 border-slate-200 hover:bg-slate-200'
+              }`}
+              title="Sincronización en la Nube y Respaldo Multi-dispositivo"
+            >
+              <Cloud className={`w-3.5 h-3.5 ${db ? 'text-emerald-600' : 'text-slate-500'}`} />
+              <span className="hidden sm:inline">
+                {db ? 'Nube Activa' : 'Nube & Respaldo'}
+              </span>
+            </button>
 
             {/* Primary Action: Asignar Tarea */}
             <button
