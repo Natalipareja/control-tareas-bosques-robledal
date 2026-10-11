@@ -211,14 +211,17 @@ export default function TaskDetailModal({ task, isOpen, onClose, onEdit }) {
               </div>
             </div>
 
-            <button
-              onClick={() => handleSendManualNotification('assign')}
-              className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition-all shrink-0"
-            >
-              <MessageCircle className="w-4 h-4" />
-              <span>{sentNotice ? '¡Notificación Enviada!' : (isAll ? 'Notificar a los 5 Consejeros' : 'Enviar a su WhatsApp')}</span>
-            </button>
+            {!isAll && (
+              <button
+                onClick={() => handleSendManualNotification()}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 transition-all shrink-0"
+              >
+                <MessageCircle className="w-4 h-4" />
+                <span>{sentNotice ? '¡Notificación Enviada!' : 'Enviar a su WhatsApp'}</span>
+              </button>
+            )}
           </div>
+
 
 
 

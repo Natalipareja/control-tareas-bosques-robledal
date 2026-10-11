@@ -243,36 +243,26 @@ export default function TaskCard({ task, onOpenDetail, onEdit }) {
           </div>
         </div>
 
-        {/* WhatsApp Quick Button */}
-        {isAll ? (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              sendTaskNotification(task.id, 'assign');
-              alert('¡Notificación enviada por WhatsApp a todos los 5 miembros del Consejo de Administración!');
-            }}
-            title="Enviar mensaje de WhatsApp a todos los consejeros"
-            className="flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-[11px] transition-all shadow-xs shrink-0"
-          >
-            <MessageCircle className="w-3.5 h-3.5" />
-            <span>A Todos</span>
-          </button>
-        ) : waUrl ? (
-          <a
-            href={waUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            onClick={(e) => e.stopPropagation()}
-            title={`Notificar a ${assignee.name} por WhatsApp`}
-            className="flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-[11px] transition-all shadow-xs shrink-0"
-          >
-            <MessageCircle className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">WhatsApp</span>
-          </a>
-        ) : (
-          <span className="text-[10px] text-slate-400 italic">Sin WhatsApp</span>
+        {/* WhatsApp Quick Button (Only for specific assigned consejero, NOT for "Todos") */}
+        {!isAll && (
+          waUrl ? (
+            <a
+              href={waUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={(e) => e.stopPropagation()}
+              title={`Notificar a ${assignee.name} por WhatsApp`}
+              className="flex items-center gap-1 px-2 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-[11px] transition-all shadow-xs shrink-0"
+            >
+              <MessageCircle className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">WhatsApp</span>
+            </a>
+          ) : (
+            <span className="text-[10px] text-slate-400 italic">Sin WhatsApp</span>
+          )
         )}
       </div>
+
 
       {/* Bottom Footer: Due Date & Move Status Arrows */}
       <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs">

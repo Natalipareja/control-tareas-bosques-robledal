@@ -12,7 +12,7 @@ export const initialUsers = [
   { 
     id: 1, 
     name: 'Lizeth Pelaez', 
-    role: 'Presidenta del Consejo', 
+    role: 'Consejera de Administración', 
     email: 'lizeth.pelaez@bosquesrobledal.com', 
     whatsapp: '573193985086', 
     displayPhone: '319 398 5086',
@@ -197,13 +197,18 @@ const loadFromStorage = (key, fallback) => {
     if (!item) return fallback;
     const parsed = JSON.parse(item);
     if (key === 'br_consejeros' && Array.isArray(parsed)) {
-      const existingNames = new Set(parsed.map(u => u.name.toLowerCase()));
+      // Normalize all roles to Consejero/a de Administración (No Presidenta)
+      const normalized = parsed.map(u => ({
+        ...u,
+        role: (u.name.toLowerCase().includes('lizeth') || u.name.toLowerCase().includes('alejandra') || u.name.toLowerCase().includes('natali'))
+          ? 'Consejera de Administración'
+          : 'Consejero de Administración'
+      }));
+      const existingNames = new Set(normalized.map(u => u.name.toLowerCase()));
       const missing = fallback.filter(u => !existingNames.has(u.name.toLowerCase()));
-      if (missing.length > 0) {
-        const merged = [...parsed, ...missing];
-        localStorage.setItem(key, JSON.stringify(merged));
-        return merged;
-      }
+      const merged = missing.length > 0 ? [...normalized, ...missing] : normalized;
+      localStorage.setItem(key, JSON.stringify(merged));
+      return merged;
     }
     if (key === 'br_tasks' && Array.isArray(parsed) && parsed.length === 0) {
       localStorage.setItem(key, JSON.stringify(fallback));
@@ -223,41 +228,8 @@ const saveToStorage = (key, data) => {
   }
 };
 
-export const generateReminders = (dueDateStr) => {
-  if (!dueDateStr) return [];
-  const targetTime = dueDateStr.includes('T') 
-    ? new Date(dueDateStr).getTime() 
-    : new Date(`${dueDateStr}T18:00:00`).getTime();
 
-  return [
-    {
-      id: '24h',
-      hoursBefore: 24,
-      label: '24 horas antes',
-      scheduledTime: new Date(targetTime - 24 * 60 * 60 * 1000).toISOString(),
-      sent: false,
-      sentAt: null
-    },
-    {
-      id: '12h',
-      hoursBefore: 12,
-      label: '12 horas antes',
-      scheduledTime: new Date(targetTime - 12 * 60 * 60 * 1000).toISOString(),
-      sent: false,
-      sentAt: null
-    },
-    {
-      id: '6h',
-      hoursBefore: 6,
-      label: '6 horas antes',
-      scheduledTime: new Date(targetTime - 6 * 60 * 60 * 1000).toISOString(),
-      sent: false,
-      sentAt: null
-    }
-  ];
-};
-
-export const buildWhatsAppMessage = ({ task, assignee, type = 'assign', appUrl }) => {
+export const buildWhatsAppMessage = ({ task, assignee, appUrl }) => {
   const formattedDueDate = task.dueDate 
     ? new Date(`${task.dueDate.split('T')[0]}T00:00:00`).toLocaleDateString('es-CO', {
         day: 'numeric',
@@ -267,23 +239,6 @@ export const buildWhatsAppMessage = ({ task, assignee, type = 'assign', appUrl }
     : 'Por definir';
 
   const cleanAppUrl = appUrl || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173');
-
-  if (type.startsWith('reminder')) {
-    const hours = type === 'reminder_24h' ? '24 HORAS' : type === 'reminder_12h' ? '12 HORAS' : '6 HORAS';
-    return (
-      `⏰ *RECORDATORIO DE VENCIMIENTO (${hours})*\n` +
-      `🏛️ *Consejo de Administración - Bosques de Robledal (Gestión 2026)*\n\n` +
-      `Hola *${assignee?.name || 'Consejero'}*,\n` +
-      `Te recordamos que la siguiente tarea asignada tiene fecha límite próxima:\n\n` +
-      `📌 *Tarea:* ${task.title}\n` +
-      `📅 *Fecha Límite:* ${formattedDueDate}\n` +
-      `⚡ *Prioridad:* ${task.priority}\n` +
-      `📂 *Categoría:* ${task.category}\n\n` +
-      `🔗 *Accede al aplicativo para reportar avances o evidencias:*\n` +
-      `${cleanAppUrl}\n\n` +
-      `_Mensaje automático del Sistema de Gestión 2026._`
-    );
-  }
 
   return (
     `🏛️ *Consejo de Administración - Bosques de Robledal (Gestión 2026)*\n\n` +
@@ -323,7 +278,7 @@ export const dispatchWhatsAppSilently = async ({ phone, text, apiUrl, apiToken, 
     }
   }
 
-  // If no external API configured or if webhook is not available, open WhatsApp Web so the message is ACTUALLY delivered!
+  // If no external API configured or if webhook is not available, open WhatsApp Web
   if (openWindow && typeof window !== 'undefined') {
     const cleanPhone = phone.replace(/[^0-9]/g, '');
     const waUrl = `https://web.whatsapp.com/send?phone=${cleanPhone}&text=${encodeURIComponent(text)}`;
@@ -338,8 +293,7 @@ const defaultWaConfig = {
   apiUrl: '',
   apiToken: '',
   appUrl: typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173',
-  autoSend: true,
-  remindersEnabled: true
+  autoSend: true
 };
 
 export const useStore = create((set, get) => ({
@@ -383,7 +337,6 @@ export const useStore = create((set, get) => ({
 
   // Tasks Actions
   addTask: (taskData) => {
-    const reminders = taskData.reminders || generateReminders(taskData.dueDate);
     const newTask = {
       ...taskData,
       id: Date.now(),
@@ -391,13 +344,12 @@ export const useStore = create((set, get) => ({
       checkpoints: taskData.checkpoints || [],
       evidences: taskData.evidences || [],
       comments: taskData.comments || [],
-      reminders,
       notificationsLog: [
         {
           id: Date.now(),
           type: 'assigned',
           date: new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }),
-          note: 'Tarea asignada y recordatorios (24h, 12h, 6h) programados'
+          note: 'Tarea asignada en el sistema'
         }
       ]
     };
@@ -411,44 +363,23 @@ export const useStore = create((set, get) => ({
     // Mirror to Firebase Cloud if connected
     saveTaskToCloud(newTask);
 
-    // Auto-send WhatsApp in background without opening window if enabled
+    // Auto-send WhatsApp ONLY if specific user (NOT for "Todos" / collective tasks)
     const state = get();
-    if (state.whatsappConfig.autoSend) {
-      if (newTask.assigneeId === 'all') {
-        state.users.forEach((u, idx) => {
-          if (u.whatsapp) {
-            const msg = buildWhatsAppMessage({
-              task: newTask,
-              assignee: u,
-              type: 'assign',
-              appUrl: state.whatsappConfig.appUrl
-            });
-            dispatchWhatsAppSilently({
-              phone: u.whatsapp,
-              text: msg,
-              apiUrl: state.whatsappConfig.apiUrl,
-              apiToken: state.whatsappConfig.apiToken,
-              openWindow: idx === 0
-            });
-          }
+    if (state.whatsappConfig.autoSend && newTask.assigneeId !== 'all') {
+      const assignee = state.users.find(u => u.id === Number(newTask.assigneeId));
+      if (assignee?.whatsapp) {
+        const msg = buildWhatsAppMessage({
+          task: newTask,
+          assignee,
+          appUrl: state.whatsappConfig.appUrl
         });
-      } else {
-        const assignee = state.users.find(u => u.id === Number(newTask.assigneeId));
-        if (assignee?.whatsapp) {
-          const msg = buildWhatsAppMessage({
-            task: newTask,
-            assignee,
-            type: 'assign',
-            appUrl: state.whatsappConfig.appUrl
-          });
-          dispatchWhatsAppSilently({
-            phone: assignee.whatsapp,
-            text: msg,
-            apiUrl: state.whatsappConfig.apiUrl,
-            apiToken: state.whatsappConfig.apiToken,
-            openWindow: true
-          });
-        }
+        dispatchWhatsAppSilently({
+          phone: assignee.whatsapp,
+          text: msg,
+          apiUrl: state.whatsappConfig.apiUrl,
+          apiToken: state.whatsappConfig.apiToken,
+          openWindow: true
+        });
       }
     }
 
@@ -476,12 +407,7 @@ export const useStore = create((set, get) => ({
       let targetTask = null;
       const updated = state.tasks.map((t) => {
         if (t.id !== taskId) return t;
-        const newDueDate = updatedFields.dueDate || t.dueDate;
-        const reminders = updatedFields.dueDate && updatedFields.dueDate !== t.dueDate
-          ? generateReminders(newDueDate)
-          : (t.reminders || generateReminders(t.dueDate));
-
-        targetTask = { ...t, ...updatedFields, reminders };
+        targetTask = { ...t, ...updatedFields };
         return targetTask;
       });
       saveToStorage('br_tasks', updated);
@@ -499,53 +425,44 @@ export const useStore = create((set, get) => ({
     deleteTaskFromCloud(taskId);
   },
 
-  sendTaskNotification: async (taskId, type = 'assign') => {
+  sendTaskNotification: async (taskId) => {
     const state = get();
     const task = state.tasks.find(t => t.id === taskId);
     if (!task) return;
 
-    const targets = task.assigneeId === 'all' 
-      ? state.users 
-      : state.users.filter(u => u.id === Number(task.assigneeId));
-
-    for (const assignee of targets) {
-      if (!assignee.whatsapp) continue;
-      const msg = buildWhatsAppMessage({
-        task,
-        assignee,
-        type,
-        appUrl: state.whatsappConfig.appUrl
-      });
-      await dispatchWhatsAppSilently({
-        phone: assignee.whatsapp,
-        text: msg,
-        apiUrl: state.whatsappConfig.apiUrl,
-        apiToken: state.whatsappConfig.apiToken
-      });
+    // Do NOT send WhatsApp if assigned to Todos
+    if (task.assigneeId === 'all') {
+      return;
     }
+
+    const assignee = state.users.find(u => u.id === Number(task.assigneeId));
+    if (!assignee || !assignee.whatsapp) return;
+
+    const msg = buildWhatsAppMessage({
+      task,
+      assignee,
+      appUrl: state.whatsappConfig.appUrl
+    });
+    await dispatchWhatsAppSilently({
+      phone: assignee.whatsapp,
+      text: msg,
+      apiUrl: state.whatsappConfig.apiUrl,
+      apiToken: state.whatsappConfig.apiToken
+    });
 
     const newLog = {
       id: Date.now(),
-      type,
+      type: 'assigned',
       date: new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }),
-      note: type.startsWith('reminder') 
-        ? `Recordatorio ${type.replace('reminder_', '')} enviado a WhatsApp (${task.assigneeId === 'all' ? 'A todos los consejeros' : 'Al responsable'})` 
-        : `Notificación enviada a WhatsApp (${task.assigneeId === 'all' ? 'A todos los consejeros' : 'Al responsable'})`
+      note: `Notificación enviada a WhatsApp a ${assignee.name}`
     };
 
     set((s) => {
       let savedTask = null;
       const updated = s.tasks.map((t) => {
         if (t.id !== taskId) return t;
-        const updatedReminders = (t.reminders || []).map(r => {
-          if (type.includes(r.id)) {
-            return { ...r, sent: true, sentAt: new Date().toISOString() };
-          }
-          return r;
-        });
         savedTask = {
           ...t,
-          reminders: updatedReminders,
           notificationsLog: [newLog, ...(t.notificationsLog || [])]
         };
         return savedTask;
@@ -556,24 +473,6 @@ export const useStore = create((set, get) => ({
     });
   },
 
-  checkDueReminders: () => {
-    const state = get();
-    if (!state.whatsappConfig.remindersEnabled) return;
-    const now = Date.now();
-
-    state.tasks.forEach((task) => {
-      if (task.status === 'completed') return;
-      (task.reminders || []).forEach((rem) => {
-        if (!rem.sent && rem.scheduledTime) {
-          const schedTime = new Date(rem.scheduledTime).getTime();
-          // If past or within reminder window
-          if (schedTime <= now) {
-            get().sendTaskNotification(task.id, `reminder_${rem.id}`);
-          }
-        }
-      });
-    });
-  },
 
   addComment: (taskId, text, author) => {
     const newComment = {
@@ -654,6 +553,15 @@ export const useStore = create((set, get) => ({
   }
 }));
 
+export const normalizeUserRole = (u) => {
+  if (!u) return u;
+  const name = (u.name || '').toLowerCase();
+  const role = (name.includes('lizeth') || name.includes('alejandra') || name.includes('natali'))
+    ? 'Consejera de Administración'
+    : 'Consejero de Administración';
+  return { ...u, role };
+};
+
 // Setup realtime listener for Firebase Firestore if connected
 if (db) {
   try {
@@ -662,7 +570,7 @@ if (db) {
       if (snapshot.empty) {
         // If Firestore collection is empty, automatically seed with local tasks
         const currentTasks = useStore.getState().tasks;
-        const currentUsers = useStore.getState().users;
+        const currentUsers = useStore.getState().users.map(normalizeUserRole);
         if (currentTasks.length > 0) {
           bulkUploadToCloud(currentTasks, currentUsers).catch(console.warn);
         }
@@ -676,10 +584,18 @@ if (db) {
       console.warn('Firebase realtime sync (tasks) note:', err.message);
     });
 
-    // Consejeros subscription
+    // Consejeros subscription with forced role normalization
     onSnapshot(collection(db, 'consejeros'), (snapshot) => {
       if (!snapshot.empty) {
-        const cloudUsers = snapshot.docs.map(doc => doc.data());
+        const cloudUsers = snapshot.docs.map(doc => {
+          const data = doc.data();
+          const normalized = normalizeUserRole(data);
+          // If Firestore still had "Presidenta", overwrite in Firestore with correct Consejera role
+          if (data.role !== normalized.role) {
+            saveUserToCloud(normalized);
+          }
+          return normalized;
+        });
         cloudUsers.sort((a, b) => Number(a.id || 0) - Number(b.id || 0));
         saveToStorage('br_consejeros', cloudUsers);
         useStore.setState({ users: cloudUsers });
@@ -691,5 +607,18 @@ if (db) {
     console.warn('Firebase initialization listener error:', err);
   }
 }
+
+// Immediate migration check to purge "Presidenta" from localStorage and Firestore
+try {
+  const existingUsers = useStore.getState().users.map(normalizeUserRole);
+  useStore.setState({ users: existingUsers });
+  saveToStorage('br_consejeros', existingUsers);
+  if (db) {
+    existingUsers.forEach(u => saveUserToCloud(u));
+  }
+} catch (e) {
+  console.warn('User normalization check:', e);
+}
+
 
 

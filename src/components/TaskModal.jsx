@@ -99,13 +99,13 @@ export default function TaskModal({ isOpen, onClose, initialData = null }) {
     if (initialData?.id) {
       updateTask(initialData.id, taskData);
       savedTask = { ...initialData, ...taskData };
-      if (notifyWhatsApp) {
-        sendTaskNotification(initialData.id, 'assign');
+      if (notifyWhatsApp && finalAssigneeId !== 'all') {
+        sendTaskNotification(initialData.id);
       }
     } else {
-      // addTask automatically handles background dispatch silently
       savedTask = addTask(taskData);
     }
+
 
     onClose();
   };
@@ -331,28 +331,31 @@ export default function TaskModal({ isOpen, onClose, initialData = null }) {
             )}
           </div>
 
-          {/* WhatsApp Direct Notification Option */}
-          <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-2xl flex items-center justify-between">
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
-                <MessageCircle className="w-4 h-4" />
+          {/* WhatsApp Direct Notification Option (Only for individual consejeros) */}
+          {!isAllSelected && (
+            <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-2xl flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-emerald-600 text-white flex items-center justify-center shrink-0">
+                  <MessageCircle className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-emerald-900">
+                    Notificar asignación por WhatsApp
+                  </p>
+                  <p className="text-[11px] text-emerald-700">
+                    Prepara el mensaje con fecha límite y enlace directo para el consejero.
+                  </p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs font-bold text-emerald-900">
-                  Notificar asignación por WhatsApp
-                </p>
-                <p className="text-[11px] text-emerald-700">
-                  Prepara el mensaje con fecha límite y enlace directo para el consejero.
-                </p>
-              </div>
+              <input
+                type="checkbox"
+                checked={notifyWhatsApp}
+                onChange={(e) => setNotifyWhatsApp(e.target.checked)}
+                className="w-4 h-4 accent-emerald-600 rounded cursor-pointer"
+              />
             </div>
-            <input
-              type="checkbox"
-              checked={notifyWhatsApp}
-              onChange={(e) => setNotifyWhatsApp(e.target.checked)}
-              className="w-4 h-4 accent-emerald-600 rounded cursor-pointer"
-            />
-          </div>
+          )}
+
 
           {/* Footer Actions */}
           <div className="pt-3 border-t border-slate-100 flex items-center justify-between gap-3 flex-wrap">

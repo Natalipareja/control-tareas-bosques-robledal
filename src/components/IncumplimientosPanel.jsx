@@ -92,6 +92,9 @@ export default function IncumplimientosPanel({ onOpenDetail, onEdit }) {
   };
 
   const generateRequerimientoWhatsApp = (task, assignee) => {
+    if (task.assigneeId === 'all' || task.assigneeId === 0 || assignee.isGroup) {
+      return null;
+    }
     const days = getDaysOverdue(task.dueDate);
     const text = encodeURIComponent(
       `⚠️ *REQUERIMIENTO DE CUMPLIMIENTO - CONSEJO DE ADMINISTRACIÓN*\n` +
@@ -109,6 +112,7 @@ export default function IncumplimientosPanel({ onOpenDetail, onEdit }) {
     const cleanPhone = assignee.whatsapp ? assignee.whatsapp.replace(/[^0-9]/g, '') : '';
     return cleanPhone ? `https://wa.me/${cleanPhone}?text=${text}` : null;
   };
+
 
   return (
     <div className="bg-white rounded-3xl border border-red-200/90 shadow-sm overflow-hidden space-y-6 p-6 transition-all">

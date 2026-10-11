@@ -38,14 +38,14 @@ export default function ConsejerosBar({ onOpenNewUser }) {
   return (
     <div className="bg-white border-b border-slate-200/80 py-4 px-4 sm:px-6 lg:px-8 shadow-xs">
       <div className="max-w-7xl mx-auto">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-3">
+          <div className="flex items-center gap-2 flex-wrap">
             <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></div>
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Equipo de Consejeros de Administración (2026)
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-600">
+              Equipo de Consejeros (2026)
             </h2>
-            <span className="text-xs text-slate-400 font-normal">
-              • Haz clic en un consejero para filtrar sus tareas
+            <span className="hidden sm:inline text-xs text-slate-400 font-normal">
+              • Haz clic para filtrar tareas
             </span>
           </div>
 
@@ -56,7 +56,7 @@ export default function ConsejerosBar({ onOpenNewUser }) {
                 className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium bg-amber-50 text-amber-800 border border-amber-200 rounded-lg hover:bg-amber-100 transition-colors"
               >
                 <X className="w-3.5 h-3.5" />
-                <span>Limpiar filtro de consejero</span>
+                <span>Limpiar filtro</span>
               </button>
             )}
 
@@ -65,13 +65,13 @@ export default function ConsejerosBar({ onOpenNewUser }) {
               className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-lg transition-colors"
             >
               <UserPlus className="w-3.5 h-3.5 text-slate-500" />
-              <span>+ Nuevo Miembro</span>
+              <span>+ Nuevo</span>
             </button>
           </div>
         </div>
 
-        {/* Consejeros Cards Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4">
+        {/* Consejeros Cards Grid: Horizontally swipeable on mobile, grid on desktop */}
+        <div className="flex overflow-x-auto pb-2 sm:grid sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3 sm:gap-4 scroll-smooth">
           {users.map((user) => {
             const stats = getUserTaskStats(user.id);
             const isSelected = selectedAssigneeId === user.id;
@@ -84,7 +84,7 @@ export default function ConsejerosBar({ onOpenNewUser }) {
               <div
                 key={user.id}
                 onClick={() => setSelectedAssigneeId(isSelected ? null : user.id)}
-                className={`relative group rounded-2xl p-3.5 border transition-all cursor-pointer ${
+                className={`relative group rounded-2xl p-3.5 border transition-all cursor-pointer min-w-[230px] sm:min-w-0 shrink-0 sm:shrink ${
                   isSelected
                     ? 'bg-emerald-50/70 border-emerald-500 shadow-md ring-2 ring-emerald-500/20'
                     : 'bg-slate-50/70 hover:bg-white border-slate-200/90 hover:border-slate-300 hover:shadow-sm'

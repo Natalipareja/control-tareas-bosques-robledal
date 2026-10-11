@@ -12,7 +12,7 @@ import WhatsAppSettingsModal from './components/WhatsAppSettingsModal';
 import CloudSyncModal from './components/CloudSyncModal';
 
 function App() {
-  const { activeView, setActiveView, setSelectedAssigneeId, checkDueReminders } = useStore();
+  const { activeView, setActiveView, setSelectedAssigneeId } = useStore();
 
 
 
@@ -49,7 +49,7 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col font-sans selection:bg-emerald-500 selection:text-white">
+    <div className="min-h-screen bg-slate-50 flex flex-col font-sans selection:bg-emerald-500 selection:text-white w-full max-w-full overflow-x-hidden">
       {/* Top Navbar */}
       <Navbar 
         onOpenNewTask={() => handleOpenNewTask()}
@@ -59,7 +59,7 @@ function App() {
       />
 
       {/* Main View Area */}
-      <main className="flex-1 pb-16">
+      <main className="flex-1 pb-16 w-full max-w-full min-w-0">
         {activeView === 'board' && (
           <>
             {/* Prominent Consejeros Top Bar with Quick Filter */}

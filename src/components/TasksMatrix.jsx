@@ -272,7 +272,8 @@ export default function TasksMatrix({ onOpenNewTask, onOpenDetail, onEdit }) {
                   year: 'numeric'
                 }) : 'Sin fecha';
 
-                const waPhone = assignee.whatsapp ? assignee.whatsapp.replace(/[^0-9]/g, '') : '';
+                const isGroupTask = assignee.isGroup || t.assigneeId === 'all' || t.assigneeId === 0;
+                const waPhone = (!isGroupTask && assignee.whatsapp) ? assignee.whatsapp.replace(/[^0-9]/g, '') : '';
                 const waUrl = waPhone ? `https://wa.me/${waPhone}?text=${encodeURIComponent(
                   `Hola ${assignee.name}, te contacto del Consejo de Administración sobre la tarea: *${t.title}*. Fecha límite: ${formattedDate}.`
                 )}` : null;
@@ -291,13 +292,13 @@ export default function TasksMatrix({ onOpenNewTask, onOpenDetail, onEdit }) {
                       </span>
                     </td>
 
-                    {/* Task Title & Description */}
-                    <td className="py-3 px-4 min-w-[200px] max-w-xs">
-                      <p className="font-bold text-slate-900 group-hover:text-emerald-700 transition-colors truncate">
+                    {/* Task Title & Description - Full text display, wraps naturally */}
+                    <td className="py-3.5 px-4 min-w-[260px] max-w-md">
+                      <p className="font-bold text-slate-900 group-hover:text-emerald-700 transition-colors whitespace-normal break-words leading-snug text-xs sm:text-sm">
                         {t.title}
                       </p>
                       {t.description && (
-                        <p className="text-[11px] text-slate-500 truncate mt-0.5">
+                        <p className="text-[11px] text-slate-600 whitespace-normal break-words mt-1 leading-relaxed">
                           {t.description}
                         </p>
                       )}
